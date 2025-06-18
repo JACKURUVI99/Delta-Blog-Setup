@@ -264,7 +264,7 @@ sudo /scripts/promote-respond <username> <approve|reject>
 
 ## -> Full Project Workflow
 
-1. `g_admin` runs `initUsers.sh` to create users, groups, and directories.
+1. `root` runs `delta-setup` to create users, groups, and directories permission..etc.
 2. Users use `promote-req` (via limited sudo) to request author rights.
 3. Admins use `promote-respond` to approve/reject based on `requests.yaml`.
 4. Authors use `manageblogs` to post/edit and `sendnotif` to alert subscribers.
@@ -272,6 +272,4 @@ sudo /scripts/promote-respond <username> <approve|reject>
 6. Moderators run `blogfilter` to scan for issues.
 7. Notification system uses `notifyserver` (Netcat) + fallback `notifycron`.
 8. All users can access public blogs via `all_blogs` symlinks.
-
-The system is modular, YAML-driven, permission-secured, and scalable for multiple users with different roles.
 
