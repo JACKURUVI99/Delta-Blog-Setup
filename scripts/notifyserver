@@ -1,0 +1,50 @@
+#!/bin/bash
+
+SUBSCRIPTIONS_FILE="/scripts/subscriptions.yaml"
+PORT=3000
+DEBUG_LOG="/tmp/ncdebug.log"
+
+while true; do
+    echo "Waiting for input on port $PORT..." >> "$DEBUG_LOG"
+    
+    msg=$(nc -l -s 127.0.0.1 -p $PORT)
+    echo "Received raw message: '$msg'" >> "$DEBUG_LOG"
+
+    # Skip if empty
+    if [[ -z "$msg" ]]; then
+        echo "Invalid input received." >> "$DEBUG_LOG"
+        continue
+    fi
+
+    # Parse author and blogname
+    IFS=' ' read -r author blogname <<< "$msg"
+
+    if [[ -z "$author" || -z "$blogname" ]]; then
+        echo "Invalid input format: '$msg'" >> "$DEBUG_LOG"
+        continue
+    fi
+
+    blogpath="/home/authors/$author/subscribers_only/$blogname"
+
+    if [[ ! -f "$blogpath" ]]; then
+        echo "Blog '$blogpath' not found" >> "$DEBUG_LOG"
+        continue
+    fi
+
+    # Get subscribers
+    mapfile -t subscribers < <(yq ".\"$author\"[]" "$SUBSCRIPTIONS_FILE")
+
+    for sub in "${subscribers[@]}"; do
+        notifs_file="/home/users/$sub/notifications.log"
+
+        # Create log file with marker if needed
+        if [[ ! -f "$notifs_file" ]]; then
+            touch "$notifs_file"
+            chown "$sub:$sub" "$notifs_file"
+            echo "new_notifs" >> "$notifs_file"
+        fi
+
+        echo "New post from $author: '$blogname'" >> "$notifs_file"
+        echo "Notification added for $sub" >> "$DEBUG_LOG"
+    done
+done

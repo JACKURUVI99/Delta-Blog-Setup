@@ -1,0 +1,49 @@
+#!/bin/bash
+
+REQUESTS_FILE="/scripts/requests.yaml"
+BLOGS_INITIAL_FILE="/scripts/blogs_initial.yaml"
+HELP_TEXT="Usage: promote-respond <username> <approve|reject>"
+
+username="$1"
+decision="$2"
+
+if [[ -z "$username" || -z "$decision" ]]; then
+    echo "$HELP_TEXT"
+    exit 1
+fi
+
+req_index=$(yq e ".requests | index(\"$username\")" "$REQUESTS_FILE")
+if [[ "$req_index" == "null" ]]; then
+    echo "No such request"
+    exit 1
+fi
+
+if [[ "$decision" == "reject" ]]; then
+    yq -i "del(.requests[$req_index])" "$REQUESTS_FILE"
+    echo "Request rejected."
+    exit 0
+fi
+
+if [[ "$decision" == "approve" ]]; then
+    usermod -g "$username" -G g_authors -d "/home/authors/$username" "$username"
+    mv "/home/users/$username" "/home/authors/$username"
+
+    dirs="/home/authors/$username/blogs /home/authors/$username/public /home/authors/$username/subscribers_only"
+    mkdir -p $dirs
+    cp "$BLOGS_INITIAL_FILE" "/home/authors/$username/blogs.yaml"
+
+    chown -R "$username:$username" "/home/authors/$username"
+    chmod u=rwx,g=rwx,o=x $dirs
+    chmod u=rw,g=rw,o= "/home/authors/$username/blogs.yaml"
+    chmod o+rx "/home/authors/$username/public"
+
+    for path in /home/users/*/all_blogs; do
+        ln -sfn "/home/authors/$username/public" "$path/$username"
+    done
+
+    yq -i "del(.requests[$req_index])" "$REQUESTS_FILE"
+    echo "User '$username' promoted to author."
+else
+    echo "$HELP_TEXT"
+    exit 1
+fi

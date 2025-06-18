@@ -1,0 +1,11 @@
+#!/bin/bash
+pacman -Syyu
+pacman -S cronie
+sudo systemctl enable cronie
+sudo systemctl start cronie
+bash /scripts/setupcorn
+bash /scripts/initusers
+pacman -S netcat
+pacman -S gnu-netcat
+bash /scripts/notisetup
+bash /scripts/promotsetup

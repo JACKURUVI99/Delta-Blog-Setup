@@ -1,0 +1,104 @@
+#!/bin/bash
+
+HELP_FILE="/scripts/blog.txt"
+author=$(whoami)
+blogname="$2"
+blogpath="/home/authors/$author/blogs/$blogname"
+blogs_data_file="/home/authors/$author/blogs.yaml"
+
+function usage() {
+    cat "$HELP_FILE"
+}
+
+function ensure_categories_exist() {
+    if ! yq e '.categories' "$blogs_data_file" > /dev/null 2>&1; then
+        yq e -i '.categories = ["Sports", "Cinema", "Technology", "Travel", "Food", "Lifestyle", "Finance"]' "$blogs_data_file"
+    fi
+}
+
+function print_categories() {
+    echo "Enter categories in preferred order (like: 2 1 3):"
+    i=1
+    for cat in "Sports" "Cinema" "Technology" "Travel" "Food" "Lifestyle" "Finance"; do
+        echo "$i. $cat"
+        i=$((i + 1))
+    done
+}
+
+function publish_common() {
+    ensure_categories_exist
+    print_categories
+    read -p "Enter preferred category order (space-separated numbers): " -a cat_order
+
+    if [[ ! -f "$blogpath" ]]; then
+        echo "Creating blog file: $blogpath"
+        touch "$blogpath"
+    fi
+
+    yq e -i "del(.blogs[] | select(.file_name == \"$blogname\"))" "$blogs_data_file"
+
+    cat_order_list=$(printf ", %s" "${cat_order[@]}")
+    cat_order_list="[${cat_order_list:2}]"
+
+    tempfile=$(mktemp)
+    echo "file_name: \"$blogname\"" > "$tempfile"
+    echo "publish_status: true" >> "$tempfile"
+    echo "cat_order: $cat_order_list" >> "$tempfile"
+
+    yq e ".blogs += [load(\"$tempfile\")]" -i "$blogs_data_file"
+    rm "$tempfile"
+}
+
+function publish() {
+    publish_common
+    ln -sf "$blogpath" "/home/authors/$author/public/$blogname"
+    setfacl -m "g:g_user:r" "$blogpath" 2>/dev/null || echo "setfacl failed"
+    echo "Blog '$blogname' published to public."
+}
+
+function super_publish() {
+    publish_common
+    ln -sf "$blogpath" "/home/authors/$author/subscribers_only/$blogname"
+    setfacl -m "g:g_user:r" "$blogpath" 2>/dev/null || echo "setfacl failed"
+    echo "Blog '$blogname' published to subscribers only."
+}
+
+function archive() {
+    unlink "/home/authors/$author/public/$blogname" 2>/dev/null
+    unlink "/home/authors/$author/subscribers_only/$blogname" 2>/dev/null
+    setfacl -x "g:g_user" "$blogpath" 2>/dev/null
+    yq e -i "(.blogs[] | select(.file_name == \"$blogname\")).publish_status = false" "$blogs_data_file"
+    echo "Blog '$blogname' archived."
+}
+
+function delete_blog() {
+    yq e -i "del(.blogs[] | select(.file_name == \"$blogname\"))" "$blogs_data_file"
+    unlink "/home/authors/$author/public/$blogname" 2>/dev/null
+    unlink "/home/authors/$author/subscribers_only/$blogname" 2>/dev/null
+    rm -f "$blogpath"
+    echo "Blog '$blogname' deleted."
+}
+
+function edit_categories() {
+    print_categories
+    read -p "Enter new category order (space-separated): " -a cat_order
+    cat_order_list=$(printf ", %s" "${cat_order[@]}")
+    cat_order_list="[${cat_order_list:2}]"
+    yq e -i "(.blogs[] | select(.file_name == \"$blogname\")).cat_order = $cat_order_list" "$blogs_data_file"
+    echo "Categories updated for '$blogname'."
+}
+
+if [[ $# -eq 0 ]]; then
+    usage
+    exit 0
+fi
+
+case "$1" in
+    -h) usage ;;
+    -p) publish ;;
+    -super) super_publish ;;
+    -a) archive ;;
+    -d) delete_blog ;;
+    -e) edit_categories ;;
+    *) echo "Unknown command. Use -h for help." ;;
+esac

@@ -1,0 +1,104 @@
+#!/bin/bash
+
+# setup_role_promotion.sh
+# Run as root to set up role promotion (user → author) functionality
+
+# 1. Create required group if not present
+groupadd -f g_admin
+groupadd -f g_authors
+
+# 2. Create /scripts/promote-req (user triggers promotion request)
+cat << 'EOF' > /scripts/promote-req
+#!/bin/bash
+
+username="$SUDO_USER"
+REQUESTS_FILE="/scripts/requests.yaml"
+
+if [[ -z "$username" ]]; then
+    echo "Please run with sudo"
+    exit 1
+fi
+
+req_exists=$(yq e ".requests | index(\"$username\")" "$REQUESTS_FILE")
+
+if [[ "$req_exists" == "null" ]]; then
+    yq -i ".requests += [\"$username\"]" "$REQUESTS_FILE"
+    echo "Request submitted. Waiting for admin approval."
+else
+    echo "Request already submitted. Please wait for admin approval."
+fi
+EOF
+
+chmod 755 /scripts/promote-req
+chown root:root /scripts/promote-req
+
+# 3. Create /scripts/promote-respond (admin accepts/rejects)
+cat << 'EOF' > /scripts/promote-respond
+#!/bin/bash
+
+REQUESTS_FILE="/scripts/requests.yaml"
+BLOGS_INITIAL_FILE="/scripts/blogs_initial.yaml"
+HELP_TEXT="Usage: promote-respond <username> <approve|reject>"
+
+username="$1"
+decision="$2"
+
+if [[ -z "$username" || -z "$decision" ]]; then
+    echo "$HELP_TEXT"
+    exit 1
+fi
+
+req_index=$(yq e ".requests | index(\"$username\")" "$REQUESTS_FILE")
+if [[ "$req_index" == "null" ]]; then
+    echo "No such request"
+    exit 1
+fi
+
+if [[ "$decision" == "reject" ]]; then
+    yq -i "del(.requests[$req_index])" "$REQUESTS_FILE"
+    echo "Request rejected."
+    exit 0
+fi
+
+if [[ "$decision" == "approve" ]]; then
+    usermod -g "$username" -G g_authors -d "/home/authors/$username" "$username"
+    mv "/home/users/$username" "/home/authors/$username"
+
+    dirs="/home/authors/$username/blogs /home/authors/$username/public /home/authors/$username/subscribers_only"
+    mkdir -p $dirs
+    cp "$BLOGS_INITIAL_FILE" "/home/authors/$username/blogs.yaml"
+
+    chown -R "$username:$username" "/home/authors/$username"
+    chmod u=rwx,g=rwx,o=x $dirs
+    chmod u=rw,g=rw,o= "/home/authors/$username/blogs.yaml"
+    chmod o+rx "/home/authors/$username/public"
+
+    for path in /home/users/*/all_blogs; do
+        ln -sfn "/home/authors/$username/public" "$path/$username"
+    done
+
+    yq -i "del(.requests[$req_index])" "$REQUESTS_FILE"
+    echo "User '$username' promoted to author."
+else
+    echo "$HELP_TEXT"
+    exit 1
+fi
+EOF
+
+chmod 750 /scripts/promote-respond
+chown root:root /scripts/promote-respond
+
+# 4. Sudoers permission for g_user to run promote-req
+echo "%g_user ALL=(ALL) NOPASSWD: /scripts/promote-req" > /etc/sudoers.d/g_user_promote
+chmod 440 /etc/sudoers.d/g_user_promote
+
+# 5. Sudoers permission for g_admin to run promote-respond
+echo "%g_admin ALL=(ALL) NOPASSWD: /scripts/promote-respond" > /etc/sudoers.d/g_admin_promote
+chmod 440 /etc/sudoers.d/g_admin_promote
+
+# 6. Ensure requests.yaml exists
+touch /scripts/requests.yaml
+chmod 664 /scripts/requests.yaml
+chown root:root /scripts/requests.yaml
+
+echo "✅ Role promotion setup complete."

@@ -1,0 +1,65 @@
+#!/bin/bash
+
+USERS_YAML="/scripts/users.yaml"
+VIEW_NOTIFS_CMD='#!/bin/bash
+
+notifs_file="$HOME/notifications.log"
+
+if [[ ! -f "$notifs_file" ]]; then
+    echo "No notifications yet."
+    exit 0
+fi
+
+echo "Your Notifications:"
+awk '"'"'
+    BEGIN { seen=0 }
+    /^new_notifs$/ { seen=1; next }
+    seen { print }
+'"'"' "$notifs_file"
+
+echo "new_notifs" > "$notifs_file"
+'
+
+usernames=$(yq '.users[].username' "$USERS_YAML")
+for user in $usernames; do
+    user_home="/home/users/$user"
+    script_path="$user_home/view_notifs"
+
+    echo "$VIEW_NOTIFS_CMD" > "$script_path"
+    chmod +x "$script_path"
+    chown "$user:$user" "$script_path"
+done
+
+CRON_SCRIPT="/scripts/notifycron"
+if [[ ! -f "$CRON_SCRIPT" ]]; then
+    cat > "$CRON_SCRIPT" <<'EOF'
+#!/bin/bash
+
+USERS_YAML="/scripts/users.yaml"
+
+usernames=$(yq '.users[].username' "$USERS_YAML")
+
+for user in $usernames; do
+    if who | grep -q "^$user"; then
+        notif_file="/home/users/$user/notifications.log"
+        [[ ! -f "$notif_file" ]] && continue
+
+        unread_cnt=$(sed -n '/^new_notifs$/,$p' "$notif_file" | tail -n +2 | wc -l)
+
+        if (( unread_cnt > 0 )); then
+            msg="Hey $user, you have $unread_cnt unread notification(s)! Use 'view_notifs' to read them."
+
+            who | grep "^$user" | while read -r u tty _; do
+                echo "$msg" | write "$user" "$tty"
+            done
+        fi
+    fi
+done
+EOF
+    chmod +x "$CRON_SCRIPT"
+fi
+
+CRONLINE="0 * * * * $CRON_SCRIPT"
+( crontab -l 2>/dev/null | grep -Fxq "$CRONLINE" ) || (
+    ( crontab -l 2>/dev/null; echo "$CRONLINE" ) | crontab -
+)

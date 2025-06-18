@@ -1,0 +1,29 @@
+#!/bin/bash
+username="$SUDO_USER"
+REQUESTS_FILE="/admin/requests.yaml"
+
+if [[ -z "$username" ]]; then
+    echo "Please use sudo"
+    exit 1
+fi
+
+option="$1"
+req_filter=".requests[] | select(. == \"$username\")"
+req_exists="$(yq "$req_filter" "$REQUESTS_FILE")"
+
+if [[ "$option" == "-d" ]]; then
+    if [[ -n "$req_exists" ]]; then
+        yq -i "del($req_filter)" "$REQUESTS_FILE"
+        echo "Removed Request"
+    else
+        echo "Request does not exist"
+    fi
+    exit 0
+fi
+
+if [[ -z "$req_exists" ]]; then
+    yq -i ".requests += [\"$username\"]" "$REQUESTS_FILE"
+    echo "Request added. Wait for admin approval."
+else
+    echo "Request already pending."
+fi
