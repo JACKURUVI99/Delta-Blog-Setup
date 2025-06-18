@@ -1,0 +1,24 @@
+#!/bin/bash
+
+REQUESTS_FILE="/scripts/requests.yaml"
+username="$SUDO_USER"
+
+if [[ -z "$username" ]]; then
+    echo "Please run with sudo"
+    exit 1
+fi
+
+# Initialize requests list if not present
+if ! yq e '.requests' "$REQUESTS_FILE" &>/dev/null; then
+    yq e -i '.requests = []' "$REQUESTS_FILE"
+fi
+
+# Check if request already exists
+if yq e ".requests | any(. == \"$username\")" "$REQUESTS_FILE" | grep -q true; then
+    echo "Request already submitted. Please wait for admin approval."
+    exit 0
+fi
+
+# Add to requests
+yq e -i ".requests += [\"$username\"]" "$REQUESTS_FILE"
+echo "Request submitted. Waiting for admin approval."

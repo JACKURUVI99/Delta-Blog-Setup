@@ -1,0 +1,64 @@
+#!/bin/bash
+
+if [[ "$(id -u)" -ne 0 ]]; then
+    echo "Only root can run this script"
+    exit 1
+fi
+
+echo "Setting ownerships and permissions..."
+
+declare -A script_info=(
+    ["initusers"]="g_admin root 750"
+    ["manageblogs"]="g_author root 750"
+    ["blogfilter"]="g_mod root 750"
+    ["userFY"]="g_admin root 750"
+    ["adminpannel"]="g_admin root 750"
+    ["subscriptionmodel"]="g_user root 755"
+    ["ncnotify"]="g_author root 750"
+    ["notifycron"]="root root 755"
+    ["rolepromotion"]="g_user root 750"
+    ["approvepromotion"]="g_admin root 750"
+)
+
+cd /scripts || { echo "Directory /scripts not found"; exit 1; }
+
+# Set permissions for each script
+for script in "${!script_info[@]}"; do
+    info=(${script_info[$script]})
+    group=${info[0]}
+    owner=${info[1]}
+    mode=${info[2]}
+
+    if [[ -f "$script" ]]; then
+        echo "Updating $script => owner: $owner, group: $group, mode: $mode"
+        chown "$owner:$group" "$script"
+        chmod "$mode" "$script"
+    else
+        echo "Warning: $script not found, skipping."
+    fi
+done
+
+# Give g_mod full access to each author's directory
+echo "Giving moderators full access to all author directories..."
+for authdir in /home/authors/*; do
+    if [[ -d "$authdir" ]]; then
+        setfacl -R -m g:g_mod:rwx "$authdir"
+        setfacl -R -d -m g:g_mod:rwx "$authdir"
+        echo "Access for g_mod set on $authdir"
+    fi
+done
+
+# Give g_admin full access to all user/mod/author directories
+echo "Giving admins full access to all user/mod/author directories..."
+for role in users authors mods; do
+    for d in /home/$role/*; do
+        if [[ -d "$d" ]]; then
+            setfacl -R -m g:g_admin:rwx "$d"
+            setfacl -R -d -m g:g_admin:rwx "$d"
+            echo "Access for g_admin set on $d"
+        fi
+    done
+done
+sudo chgrp g_user /scripts/subscriptions.yaml
+sudo chmod 664 /scripts/subscriptions.yaml
+echo "All permissions and ACLs have been set."

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+REQ_FILE="/tmp/promote_requests.log"
+YAML_FILE="/scripts/requests.yaml"
+
+if [[ ! -f "$REQ_FILE" ]]; then
+    exit 0
+fi
+
+mapfile -t pending < "$REQ_FILE"
+> "$REQ_FILE"  # clear after reading
+
+for user in "${pending[@]}"; do
+    exists=$(yq ".requests[] | select(. == \"$user\")" "$YAML_FILE")
+    if [[ -z "$exists" ]]; then
+        yq -i ".requests += [\"$user\"]" "$YAML_FILE"
+        echo "✔ Added $user to requests.yaml"
+    else
+        echo "⚠️  $user already in requests.yaml"
+    fi
+done

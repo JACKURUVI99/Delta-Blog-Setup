@@ -1,0 +1,39 @@
+#!/bin/bash
+
+SUBSCRIPTIONS_FILE="/scripts/subscriptions.yaml"
+PORT=3000
+
+while true; do
+  # Listen for incoming messages: "author blogname"
+  msg=($(nc -l -s localhost -p $PORT))
+
+  if [[ $? != 0 ]]; then
+    ((PORT++))
+    [[ $PORT -gt 3999 ]] && echo "❌ Port range exhausted." && exit 1
+    continue
+  fi
+
+  author="${msg[0]}"
+  blogname="${msg[1]}"
+  blogpath="/home/authors/$author/subscribers_only/$blogname"
+
+  if [[ -z "$author" || -z "$blogname" || ! -f "$blogpath" ]]; then
+    echo "❌ Invalid broadcast: author or blog not found"
+    continue
+  fi
+
+  subscribers=($(yq ".\"$author\"[]" "$SUBSCRIPTIONS_FILE"))
+
+  for sub in "${subscribers[@]}"; do
+    notifs_file="/home/users/$sub/notifications.log"
+    mkdir -p "$(dirname "$notifs_file")"
+    if [[ ! -f "$notifs_file" ]]; then
+      echo "new_notifs" > "$notifs_file"
+      chown "$sub:$sub" "$notifs_file"
+    fi
+
+    echo "New post from $author: '$blogname'" >> "$notifs_file"
+  done
+
+  echo "📢 Sent: $author/$blogname"
+done
