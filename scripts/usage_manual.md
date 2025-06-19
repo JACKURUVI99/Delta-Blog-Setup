@@ -212,17 +212,6 @@ echo "your_username new_blog.txt" | nc 127.0.0.1 3000
 
 ---
 
-## ✅ VERIFICATION
-
-Run the following as any user to test:
-
-```bash
-ls ~/all_blogs
-~/view_notifs
-```
-
-Ensure `~/notifications.log` is updated and `~/view_notifs` shows output after blog posts.
-
 ---
 
 ##
