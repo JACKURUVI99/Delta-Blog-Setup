@@ -1,0 +1,100 @@
+#!/bin/bash
+
+#set -euo pipefail
+
+USERS_PREF_FILE="/scripts/userpref.yaml"
+admin_user="${SUDO_USER:-$USER}"
+
+if ! groups "$admin_user" | grep -qw "g_admin"; then
+    echo "Only admins can run this script."
+    exit 1
+fi
+
+authors_base=($(ls -1d /home/authors/*/))
+
+n_blogs=$(find /home/authors/*/public/ -type f | wc -l)
+if [[ $n_blogs -eq 0 ]]; then
+    echo "No blogs found."
+    exit 1
+fi
+
+n_users=$(yq '.users | length' "$USERS_PREF_FILE")
+n=$((n_users / n_blogs))
+if [[ $n -lt 1 ]]; then n=1; fi
+
+map_cu=$(mktemp)
+
+for ((i = 0; i < n_users; i++)); do
+    user_block=$(yq ".users[$i]" "$USERS_PREF_FILE")
+    username=$(echo "$user_block" | yq '.username')
+    pref1=$(echo "$user_block" | yq '.pref1')
+    pref2=$(echo "$user_block" | yq '.pref2')
+    pref3=$(echo "$user_block" | yq '.pref3')
+
+    yq -i "
+      .[\"$pref1\"].1 += [\"$username\"] |
+      .[\"$pref2\"].2 += [\"$username\"] |
+      .[\"$pref3\"].3 += [\"$username\"]
+    " "$map_cu"
+
+    echo "suggestions: []" > "/home/users/$username/fyi.yaml"
+done
+
+for author_base in "${authors_base[@]}"; do
+    blogs_data_file="${author_base}blogs.yaml"
+    author=$(basename "$author_base")
+
+    j=0
+    while true; do
+        blog=$(yq ".blogs[$j]" "$blogs_data_file")
+        if [[ "$blog" == "null" ]]; then break; fi
+        ((j++))
+
+        publish_status=$(echo "$blog" | yq -r '.publish_status')
+        if [[ "$publish_status" == "false" ]]; then continue; fi
+
+        file_name=$(echo "$blog" | yq -r '.file_name')
+        cat_order=($(echo "$blog" | yq -r '.cat_order[]'))
+
+        _n=0
+        curr_cat_idx=0
+        pref_no=1
+
+        while [ $_n -lt $n ]; do
+            cate_no=${cat_order[curr_cat_idx]:-}
+            if [[ -z "$cate_no" ]]; then break; fi
+
+            category=$(yq -r ".categories[$((cate_no - 1))]" "$blogs_data_file")
+
+            user=$(yq -r ".$category.$pref_no[0] // \"\"" "$map_cu")
+            if [[ -z "$user" ]]; then
+                if [[ $pref_no -eq 3 ]]; then
+                    ((curr_cat_idx++))
+                    pref_no=1
+                else
+                    ((pref_no++))
+                fi
+                continue
+            fi
+
+            yq -i "del(.$category.$pref_no[0])" "$map_cu"
+
+            suggestion=$(cat <<EOF
+{
+  "file_name": "$file_name",
+  "category": "$category",
+  "author": "$author"
+}
+EOF
+)
+            fyi="/home/users/$user/fyi.yaml"
+            yq -i ".suggestions += [$suggestion]" "$fyi"
+
+            ((_n++))
+        done
+    done
+done
+
+rm -f "$map_cu"
+
+echo "All FYI pages generated."
