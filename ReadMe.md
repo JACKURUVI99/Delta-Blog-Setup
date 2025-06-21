@@ -1,5 +1,18 @@
 # Delta Task 1 - Blog Server
 
+## Setup Instructions
+
+Run the main setup once as root:
+
+```bash
+sudo bash delta-setup
+```
+
+`delta-setup` performs:
+
+- Makes `yq` executable at `/usr/local/bin/yq`
+- Runs `.initusers`, `.notifysetup`, `.promotsetup`, `.setupcorn`
+- Starts `.notifyserver` in background
 ---
 
 ## Directory Structure
@@ -72,19 +85,7 @@ These are all invoked automatically through the main `delta-setup` script.
 
 ---
 
-## Setup Instructions
 
-Run the main setup once as root:
-
-```bash
-sudo bash delta-setup
-```
-
-`delta-setup` performs:
-
-- Makes `yq` executable at `/usr/local/bin/yq`
-- Runs `.initusers`, `.notifysetup`, `.promotsetup`, `.setupcorn`
-- Starts `.notifyserver` in background
 
 Ensure notify server starts:
 
