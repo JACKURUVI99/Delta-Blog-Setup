@@ -61,6 +61,8 @@ function super_publish() {
     ln -sf "$blogpath" "/home/authors/$author/subscribers_only/$blogname"
     setfacl -m "g:g_user:r" "$blogpath" 2>/dev/null || echo "setfacl failed"
     echo "Blog '$blogname' published to subscribers only."
+    echo "$author $blogname" | nc 127.0.0.1 3000 #here it is sending a notification to the server
+    echo "Notification sent to subscribers"
 }
 
 function archive() {
