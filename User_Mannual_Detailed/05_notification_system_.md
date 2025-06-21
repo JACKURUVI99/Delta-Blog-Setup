@@ -280,7 +280,6 @@ This system ensures that users who have subscribed using the mechanism from [Cha
 
 Now that we understand how users are notified, let's look at how a regular user can take the next step and become an Author themselves.
 
-[Next Chapter: Author Promotion Workflow](06_author_promotion_workflow_.md)
 
 ---
 
