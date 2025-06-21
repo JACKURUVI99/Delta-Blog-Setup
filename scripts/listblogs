@@ -1,0 +1,38 @@
+#!/bin/bash
+
+echo "***********List of Published Blogs****************"
+echo "------------------------------------------"
+printf "%-20s %-15s %-20s\n" "Blog File" "Author" "Categories"
+echo "------------------------------------------"
+
+for author_dir in /home/authors/*; do
+    author=$(basename "$author_dir")
+    blogs_yaml="$author_dir/blogs.yaml"
+
+    if [[ ! -f "$blogs_yaml" ]]; then
+        continue
+    fi
+
+    categories=($(yq -r '.categories[]' "$blogs_yaml"))
+    blog_count=$(yq e '.blogs | length' "$blogs_yaml")
+
+    for ((i = 0; i < blog_count; i++)); do
+        blog_file=$(yq e ".blogs[$i].file_name" "$blogs_yaml")
+        published=$(yq e ".blogs[$i].publish_status" "$blogs_yaml")
+
+        if [[ "$published" != "true" ]]; then
+            continue
+        fi
+
+        cat_order=($(yq e ".blogs[$i].cat_order[]" "$blogs_yaml"))
+        cat_names=()
+        for idx in "${cat_order[@]}"; do
+            name=${categories[$((idx - 1))]}
+            cat_names+=("$name")
+        done
+
+        printf "%-20s %-15s %-20s\n" "$blog_file" "$author" "$(IFS=,; echo "${cat_names[*]}")"
+    done
+done
+
+echo "------------------------------------------"

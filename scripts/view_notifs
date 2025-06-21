@@ -1,0 +1,18 @@
+#!/bin/bash
+
+notifs_file="$HOME/notifications.log"
+
+if [[ ! -f "$notifs_file" ]]; then
+    echo "No notifications yet."
+    exit 0
+fi
+
+echo "Your Notifications:"
+awk '
+    BEGIN { seen=0 }
+    /^new_notifs$/ { seen=1; next }
+    seen { print }
+' "$notifs_file"
+
+# Mark all as read
+echo "new_notifs" > "$notifs_file"

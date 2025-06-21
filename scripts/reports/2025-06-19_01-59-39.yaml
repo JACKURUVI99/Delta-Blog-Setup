@@ -1,0 +1,31 @@
+blogs:
+  - file_name: "new.txt"
+    author: "bala"
+    publish_status: true
+    categories:
+      - "Sports"
+      - "Technology"
+    reads: 0
+  - file_name: "bl.txt"
+    author: "bala"
+    publish_status: true
+    categories:
+      - "Sports"
+      - "Technology"
+      - "Travel"
+    reads: 0
+  - file_name: "new"
+    author: "firoz"
+    publish_status: true
+    categories:
+      - "Sports"
+      - "Technology"
+      - "Travel"
+    reads: 0
+categories:
+  Sports: 3
+  Technology: 3
+  Travel: 2
+top_articles:
+total_published: 3
+total_deleted: 0
