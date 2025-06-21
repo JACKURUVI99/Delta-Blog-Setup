@@ -162,17 +162,6 @@ total_deleted: 1
 
 ---
 
-## Project Scope
-
-This blog platform offers:
-
-- Role-based blogging system
-- Real-time notification using Netcat
-- YAML-driven metadata management
-- ACL-based permission handling
-- Automated reporting for administrators
-
-
 
 ---
 
