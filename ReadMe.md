@@ -5,6 +5,10 @@
 Run the main setup once as root:
 
 ```bash
+https://github.com/JACKURUVI99/Delta-Blog-Setup/
+cd Delta-Blog-Setup
+sudo mv scripts ~/scripts
+cd /scripts
 sudo bash delta-setup
 ```
 
