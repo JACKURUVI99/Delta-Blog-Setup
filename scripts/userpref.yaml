@@ -1,0 +1,300 @@
+users:
+  - name: Aarav
+    username: aarav01
+    pref1: Technology
+    pref2: Finance
+    pref3: Sports
+  
+  - name: Aisha
+    username: aisha02
+    pref1: Cinema
+    pref2: Lifestyle
+    pref3: Travel
+  
+  - name: Alice
+    username: alice03
+    pref1: Food
+    pref2: Technology
+    pref3: Finance
+  
+  - name: Arjun
+    username: arjun04
+    pref1: Sports
+    pref2: Technology
+    pref3: Cinema
+  
+  - name: Arya
+    username: arya05
+    pref1: Lifestyle
+    pref2: Food
+    pref3: Travel
+  
+  - name: Bob
+    username: bob06
+    pref1: Finance
+    pref2: Sports
+    pref3: Technology
+  
+  - name: Charan
+    username: charan07
+    pref1: Travel
+    pref2: Cinema
+    pref3: Food
+  
+  - name: Charlie
+    username: charlie08
+    pref1: Technology
+    pref2: Travel
+    pref3: Finance
+  
+  - name: Deepa
+    username: deepa09
+    pref1: Cinema
+    pref2: Food
+    pref3: Lifestyle
+  
+  - name: David
+    username: david10
+    pref1: Sports
+    pref2: Finance
+    pref3: Technology
+  
+  - name: Diya
+    username: diya11
+    pref1: Food
+    pref2: Sports
+    pref3: Cinema
+  
+  - name: Emma
+    username: emma12
+    pref1: Lifestyle
+    pref2: Technology
+    pref3: Food
+  
+  - name: Farhan
+    username: farhan13
+    pref1: Technology
+    pref2: Cinema
+    pref3: Travel
+  
+  - name: Gauri
+    username: gauri14
+    pref1: Finance
+    pref2: Travel
+    pref3: Sports
+  
+  - name: George
+    username: george15
+    pref1: Cinema
+    pref2: Technology
+    pref3: Lifestyle
+  
+  - name: Hari
+    username: hari16
+    pref1: Travel
+    pref2: Finance
+    pref3: Food
+  
+  - name: Harry
+    username: harry17
+    pref1: Sports
+    pref2: Cinema
+    pref3: Finance
+  
+  - name: Isha
+    username: isha18
+    pref1: Food
+    pref2: Lifestyle
+    pref3: Technology
+  
+  - name: Ian
+    username: ian19
+    pref1: Technology
+    pref2: Food
+    pref3: Sports
+  
+  - name: Jack
+    username: jack20
+    pref1: Lifestyle
+    pref2: Finance
+    pref3: Cinema
+  
+  - name: Kabir
+    username: kabir21
+    pref1: Travel
+    pref2: Sports
+    pref3: Technology
+  
+  - name: Kavya
+    username: kavya22
+    pref1: Cinema
+    pref2: Travel
+    pref3: Finance
+  
+  - name: Kevin
+    username: kevin23
+    pref1: Finance
+    pref2: Food
+    pref3: Travel
+  
+  - name: Krish
+    username: krish24
+    pref1: Sports
+    pref2: Lifestyle
+    pref3: Food
+  
+  - name: Laura
+    username: laura25
+    pref1: Technology
+    pref2: Sports
+    pref3: Lifestyle
+  
+  - name: Meera
+    username: meera26
+    pref1: Food
+    pref2: Cinema
+    pref3: Finance
+  
+  - name: Mike
+    username: mike27
+    pref1: Cinema
+    pref2: Finance
+    pref3: Technology
+  
+  - name: Nikhil
+    username: nikhil28
+    pref1: Finance
+    pref2: Technology
+    pref3: Cinema
+  
+  - name: Nina
+    username: nina29
+    pref1: Lifestyle
+    pref2: Travel
+    pref3: Sports
+  
+  - name: Omar
+    username: omar30
+    pref1: Travel
+    pref2: Lifestyle
+    pref3: Technology
+  
+  - name: Pooja
+    username: pooja31
+    pref1: Sports
+    pref2: Food
+    pref3: Travel
+  
+  - name: Paul
+    username: paul32
+    pref1: Technology
+    pref2: Lifestyle
+    pref3: Cinema
+  
+  - name: Rahul
+    username: rahul33
+    pref1: Cinema
+    pref2: Sports
+    pref3: Food
+  
+  - name: Rani
+    username: rani34
+    pref1: Food
+    pref2: Finance
+    pref3: Lifestyle
+  
+  - name: Rishi
+    username: rishi35
+    pref1: Finance
+    pref2: Cinema
+    pref3: Technology
+  
+  - name: Steve
+    username: steve36
+    pref1: Travel
+    pref2: Technology
+    pref3: Cinema
+  
+  - name: Sanjay
+    username: sanjay37
+    pref1: Lifestyle
+    pref2: Sports
+    pref3: Finance
+  
+  - name: Tina
+    username: tina38
+    pref1: Technology
+    pref2: Travel
+    pref3: Food
+  
+  - name: Uma
+    username: uma39
+    pref1: Sports
+    pref2: Lifestyle
+    pref3: Travel
+  
+  - name: Varun
+    username: varun40
+    pref1: Cinema
+    pref2: Food
+    pref3: Technology
+  
+  - name: Veena
+    username: veena41
+    pref1: Finance
+    pref2: Lifestyle
+    pref3: Cinema
+  
+  - name: Wendy
+    username: wendy42
+    pref1: Food
+    pref2: Travel
+    pref3: Sports
+  
+  - name: Xavier
+    username: xavier43
+    pref1: Technology
+    pref2: Finance
+    pref3: Food
+  
+  - name: Yash
+    username: yash44
+    pref1: Lifestyle
+    pref2: Cinema
+    pref3: Technology
+  
+  - name: Zara
+    username: zara45
+    pref1: Travel
+    pref2: Food
+    pref3: Finance
+  
+  - name: Zoya
+    username: zoya46
+    pref1: Sports
+    pref2: Technology
+    pref3: Lifestyle
+  
+  - name: Vinay
+    username: vinay47
+    pref1: Cinema
+    pref2: Finance
+    pref3: Travel
+  
+  - name: Tara
+    username: tara48
+    pref1: Finance
+    pref2: Sports
+    pref3: Food
+  
+  - name: Ritu
+    username: ritu49
+    pref1: Technology
+    pref2: Cinema
+    pref3: Lifestyle
+  
+  - name: Neel
+    username: neel50
+    pref1: Food
+    pref2: Travel
+    pref3: Cinema
