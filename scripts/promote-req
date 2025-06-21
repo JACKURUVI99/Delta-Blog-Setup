@@ -1,18 +1,21 @@
 #!/bin/bash
 
-username="$SUDO_USER"
 REQUESTS_FILE="/scripts/requests.yaml"
+username="$SUDO_USER"
 
 if [[ -z "$username" ]]; then
-    echo "Please run with sudo"
+    echo "Please run this script with sudo"
     exit 1
 fi
 
-req_exists=$(yq e ".requests | index(\"$username\")" "$REQUESTS_FILE")
+export username  # so it can be accessed in yq using env()
 
-if [[ "$req_exists" == "null" ]]; then
-    yq -i ".requests += [\"$username\"]" "$REQUESTS_FILE"
-    echo "Request submitted. Waiting for admin approval."
+# Check if user is already in the request list
+exists=$(yq e '.requests[] == env(username)' "$REQUESTS_FILE")
+
+if echo "$exists" | grep -q true; then
+    echo "Promotion request already exists. Please wait for admin approval."
 else
-    echo "Request already submitted. Please wait for admin approval."
+    yq -i '.requests += [env(username)]' "$REQUESTS_FILE"
+    echo "Promotion request submitted."
 fi

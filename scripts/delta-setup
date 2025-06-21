@@ -1,11 +1,17 @@
 #!/bin/bash
 pacman -Syyu
+sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+sudo chmod +x /usr/local/bin/yq
 pacman -S cronie
-sudo systemctl enable cronie
-sudo systemctl start cronie
-bash /scripts/setupcorn
-bash /scripts/initusers
 pacman -S netcat
 pacman -S gnu-netcat
-bash /scripts/notisetup
-bash /scripts/promotsetup
+pacman -S lua 
+pacman -S docker
+sudo systemctl enable cronie
+sudo systemctl start cronie
+bash /scripts/.setupcorn
+bash /scripts/.initusers
+bash /scripts/.notisetup
+bash /scripts/.promotsetup
+chmod +x /scripts/.notifyserver
+nohup /scripts/.notifyserver &
