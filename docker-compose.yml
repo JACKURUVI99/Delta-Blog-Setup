@@ -1,0 +1,84 @@
+services:
+  blogserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blogserver
+    hostname: blogserver
+    privileged: true
+    volumes:
+      - ./scripts:/scripts                         # All platform scripts
+      - users_data:/home                           # Authors' home dirs
+      - /etc/passwd:/etc/passwd:ro                 # System user info
+      - /etc/shadow:/etc/shadow:ro                 # Password info
+      - /etc/group:/etc/group:ro                   # Group info
+    networks:
+      - internal                                   # Private network with DB
+    depends_on:
+      - db
+    mem_limit: 512m                                # Limit memory
+    cpus: 0.5                                       # Limit CPU
+    pids_limit: 100                                 # Limit number of processes
+
+  db:
+    build:
+      context: ./db                                # Custom DB image with migration.sql
+      dockerfile: Dockerfile
+    container_name: blogdb
+    hostname: blogdb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: blogdb
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - internal
+    mem_limit: 256m
+    cpus: 0.4
+    pids_limit: 100
+
+  nginx:
+    build:
+      context: ./nginx
+    container_name: nginx
+    hostname: blog.in
+    depends_on:
+      - blogserver
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - users_data:/home:ro                        # Read-only access to blogs
+      - ./nginx/certs:/etc/nginx/certs:ro          # SSL certs for HTTPS
+    networks:
+      - internal
+      - external
+    mem_limit: 128m
+    cpus: 0.2
+    pids_limit: 50
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"                                  # Access phpMyAdmin at localhost:8080
+    environment:
+      PMA_HOST: blogdb
+      MYSQL_ROOT_PASSWORD: root123
+    networks:
+      - internal
+    mem_limit: 128m
+    cpus: 0.2
+    pids_limit: 50
+
+volumes:
+  users_data:                                       # Stores all user blogs and home data
+  db_data:                                          # Persistent MySQL data
+
+networks:
+  internal:
+    driver: bridge
+  external:
+    driver: bridge

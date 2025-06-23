@@ -1,0 +1,3 @@
+CREATE USER IF NOT EXISTS 'readonly'@'%' IDENTIFIED BY 'readonly123';
+GRANT SELECT ON blogdb.* TO 'readonly'@'%';
+FLUSH PRIVILEGES;

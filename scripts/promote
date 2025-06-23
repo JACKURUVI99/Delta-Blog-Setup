@@ -1,0 +1,18 @@
+#!/bin/bash
+
+username="$SUDO_USER"
+REQUESTS_FILE="/scripts/requests.yaml"
+
+if [[ -z "$username" ]]; then
+    echo "Run with sudo"
+    exit 1
+fi
+
+req_exists=$(yq e ".requests | index(\"$username\")" "$REQUESTS_FILE")
+
+if [[ "$req_exists" == "null" ]]; then
+    yq -i ".requests += [\"$username\"]" "$REQUESTS_FILE"
+    echo "Request submitted"
+else
+    echo "Request already submitted"
+fi

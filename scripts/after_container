@@ -1,0 +1,15 @@
+#!/bin/bash
+
+echo "[+] Fetching blog host entries from container..."
+docker exec blogserver grep '.blog.in' /etc/hosts > container_blog_entries.txt
+
+echo "[+] Appending to host /etc/hosts..."
+sudo tee -a /etc/hosts < container_blog_entries.txt > /dev/null
+
+echo "[✓] Host updated. Try opening any *.blog.in in browser."
+
+echo "[+] Fetching blog host entries from container..."
+bash /scripts/.generatehostentry
+
+echo "[+] Appending to host /etc/hosts..."
+bash /scripts/.sync_hosts_to_host

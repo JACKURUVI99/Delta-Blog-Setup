@@ -1,0 +1,109 @@
+#!/bin/bash
+if [[ ! -e /scripts && -d "$(pwd)/scripts" ]]; then
+    ln -s "$(pwd)/scripts" /scripts
+fi
+install_pkg() {
+    pkg="$1"
+    if ! pacman -Qi "$pkg" &>/dev/null; then
+        echo "[+] Installing $pkg..."
+        pacman -Sy --noconfirm "$pkg"
+    else
+        echo "[=] $pkg is already installed. Skipping..."
+    fi
+}
+
+echo "[*] Updating system..."
+pacman -Syyu --noconfirm
+
+# Install required packages
+for p in cronie netcat gnu-netcat lua docker which; do
+    install_pkg "$p"
+done
+
+# Install yq
+if ! command -v yq &> /dev/null; then
+    echo "[+] Installing yq..."
+    wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+    chmod +x /usr/local/bin/yq
+else
+    echo "[=] yq already installed."
+fi
+
+echo "[*] Running core blog setup..."
+
+# 1. Initialize users and their directories
+bash /scripts/.initusers
+
+# 2. Cron setup (host updates etc.)
+bash /scripts/.setupcorn
+bash /scripts/.croninjector    # injects .hostupdate
+
+# 3. Notification system
+bash /scripts/.notifysetup
+chmod +x /scripts/.notifyserver
+nohup bash /scripts/.notifyserver > /dev/null 2>&1 &
+
+# 4. Promote system
+bash /scripts/.promotsetup
+
+# 5. Nginx permission setup
+chmod +x /scripts/.nginxSetup
+bash /scripts/.nginxSetup
+
+# 6. Run host updater once immediately
+bash /scripts/.hostupdate
+
+# Ensure /etc/hosts is updated with all author blog domains
+if [[ -x /scripts/.hostupdate ]]; then
+    bash /scripts/.hostupdate
+fi
+
+bash /scripts/.genratehostentry
+bash /scripts/.fixperms
+echo "Delta Blog Platform is fully initialized."
+# -----------------------------------------------------------------------------------------------
+
+echo "[*] Setting up DB backup cron..."
+cat <<EOF > /scripts/cron_db_backup.sh
+#!/bin/bash
+DATE=\$(date +%F)
+mkdir -p /home/backups
+mysqldump --defaults-extra-file=/scripts/.my.cnf blogdb > /home/backups/blogdb_\$DATE.sql
+EOF
+
+chmod +x /scripts/cron_db_backup.sh
+
+# Add to root's crontab (only if not already)
+( crontab -l 2>/dev/null | grep -q "cron_db_backup.sh" ) || (
+    echo "0 3 8-14 * 5 [ \$(date +\\%u) -eq 5 ] && bash /scripts/cron_db_backup.sh" | crontab -
+    echo "[✓] Cron job added"
+)
+
+# --- 2. SSL Certificate ---
+echo "[*] Ensuring SSL certificate for Nginx..."
+mkdir -p /etc/nginx/certs
+if [[ ! -f /etc/nginx/certs/self.crt ]]; then
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout /etc/nginx/certs/self.key \
+        -out /etc/nginx/certs/self.crt \
+        -subj "/C=IN/ST=TN/L=NIT/O=Delta/CN=blog.in"
+    echo "[✓] SSL certificate generated"
+fi
+
+# --- 3. SSH Setup ---
+echo "[*] Ensuring SSH is enabled..."
+mkdir -p /run/sshd
+sed -i 's/#Port 22/Port 22/' /etc/ssh/sshd_config
+systemctl enable sshd 2>/dev/null || true
+systemctl start sshd 2>/dev/null || /usr/bin/sshd
+
+echo "[✓] Delta Blog SuperUser Setup Complete"
+
+# Ensure cron is installed (already done in Dockerfile)
+echo "[+] Setting up cron job for monthly DB backups..."
+
+# Add this only if not already in crontab
+CRON_ENTRY='0 3 8-14 * * [ "$(date +\%u)" -eq 5 ] && bash /scripts/.db_backup'
+
+grep -qF -- "$CRON_ENTRY" /var/spool/cron/root || echo "$CRON_ENTRY" >> /var/spool/cron/root
+
