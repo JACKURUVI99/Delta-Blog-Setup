@@ -1,0 +1,55 @@
+#!/bin/bash
+
+SUBSCRIPTIONS_FILE="/scripts/subscriptions.yaml"
+BASE_PORT=3000
+MAX_PORT=3999
+LOG="/tmp/ncdebug.log"
+
+notifyserver() {
+    port=$BASE_PORT
+    echo "Starting Netcat server..." >> "$LOG"
+
+    while true; do
+        echo "Listening on port $port..." >> "$LOG"
+        msg=$(nc -l "$port" -q 1)
+
+        if [[ -z "$msg" ]]; then
+            echo "Empty message." >> "$LOG"
+            continue
+        fi
+
+        author=$(echo "$msg" | awk '{print $1}')
+        blogname=$(echo "$msg" | awk '{print $2}')
+
+        if [[ -z "$author" || -z "$blogname" ]]; then
+            echo "Invalid input." >> "$LOG"
+            continue
+        fi
+
+        blogfile="/home/authors/$author/subscribers_only/$blogname"
+        [[ ! -f "$blogfile" ]] && echo "Blog not found: $blogfile" >> "$LOG" && continue
+
+        mapfile -t subscribers < <(yq ".\"$author\"[]" "$SUBSCRIPTIONS_FILE" 2>/dev/null)
+
+        for sub in "${subscribers[@]}"; do
+            notifs="/home/users/$sub/notifications.log"
+
+            [[ ! -f "$notifs" ]] && echo -e "Welcome to your notifications log\nnew_notifs" > "$notifs" && chown "$sub:$sub" "$notifs"
+            if ! grep -q "^new_notifs$" "$notifs"; then echo -e "\nnew_notifs" >> "$notifs"; fi
+
+            tmp=$(mktemp)
+
+            awk -v msg="New post from $author: '$blogname'" '
+                BEGIN { p=0 }
+                /^new_notifs$/ && p==0 { print; print msg; p=1; next }
+                { print }
+            ' "$notifs" > "$tmp" && mv "$tmp" "$notifs"
+
+            chown "$sub:$sub" "$notifs"
+        done
+
+        echo "Notification sent: $author/$blogname" >> "$LOG"
+    done
+}
+
+notifyserver

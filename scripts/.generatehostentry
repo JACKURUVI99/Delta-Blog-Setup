@@ -1,0 +1,28 @@
+#!/bin/bash
+
+USERS_YAML="/scripts/users.yaml"
+HOSTS_FILE="/etc/hosts"
+TMP_HOSTS="/tmp/hosts.tmp"
+
+# Backup current hosts file
+cp "$HOSTS_FILE" "${HOSTS_FILE}.bak"
+
+# Extract authors list
+authors=$(yq -r '.authors[].username' "$USERS_YAML")
+
+# Prepare new hosts content starting from existing hosts without our blog entries
+grep -vE 'blog\.local' "$HOSTS_FILE" > "$TMP_HOSTS"
+
+# Add author blog subdomains pointing to localhost
+for author in $authors; do
+  entry="127.0.0.1    ${author}.blog.local"
+  # Check if entry already exists
+  if ! grep -qF "$entry" "$TMP_HOSTS"; then
+    echo "$entry" >> "$TMP_HOSTS"
+  fi
+done
+
+# Replace /etc/hosts with updated version
+mv "$TMP_HOSTS" "$HOSTS_FILE"
+
+echo "[✓] /etc/hosts updated with blog subdomains"

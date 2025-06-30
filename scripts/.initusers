@@ -1,0 +1,128 @@
+#!/bin/bash
+
+USERS_YAML_FILE="/scripts/users.yaml"
+BLOGS_FILE="/scripts/blogs.yaml"
+default_passwd="0804"
+
+groupadd -f g_user
+groupadd -f g_author
+groupadd -f g_mod
+groupadd -f g_admin
+
+lock_removed_users() {
+    role="$1"
+    for username in $(ls -1p "/home/$role/" 2>/dev/null | sed -n 's/\(.*\)\/$/\1/p'); do
+        exists=$(yq ".$role[] | select(.username == \"$username\")" "$USERS_YAML_FILE")
+        if [[ -z "$exists" ]]; then
+            usermod -e 1 "$username"
+            echo "Locked $role: $username"
+        fi
+    done
+}
+
+create_user() {
+    role="$1"
+    group="$2"
+    index=0
+    while true; do
+        entry=$(yq ".$role[$index]" "$USERS_YAML_FILE")
+        [[ "$entry" == "null" ]] && break
+
+        username=$(echo "$entry" | yq ".username" | tr -d '"')
+        name=$(echo "$entry" | yq ".name" | tr -d '"')
+        homedir="/home/$role/$username"
+        ((index++))
+
+        usermod -e -1 "$username" 2>/dev/null
+        useradd -m -d "$homedir" -U -c "$name" "$username" 2>/dev/null
+        echo -e "$default_passwd\n$default_passwd" | passwd -q "$username"
+        usermod -a -G "$group" "$username"
+
+        chmod o+x "$homedir"
+        setfacl -m "m:rwx" "$homedir"
+
+        if [[ "$role" == "users" ]]; then
+            mkdir -p "$homedir/all_blogs" "$homedir/subscribed_blogs"
+            touch "$homedir/blog_reads.log"
+            chown "$username:$username" "$homedir"/*
+
+        elif [[ "$role" == "authors" ]]; then
+            groupadd -f "g_${username}_subs"
+            mkdir -p "$homedir/blogs" "$homedir/public" "$homedir/subscribers_only"
+            cp "$BLOGS_FILE" "$homedir/blogs.yaml"
+            chown "$username:$username" "$homedir"/*
+            chmod u=rwx,g=rwx,o=x "$homedir/blogs" "$homedir/public" "$homedir/subscribers_only"
+            chmod u=rw,g=rw,o= "$homedir/blogs.yaml"
+            chmod o+r "$homedir/public"
+            setfacl -R -m "g:g_${username}_subs:rx" "$homedir/subscribers_only"
+            setfacl -R -d -m "g:g_${username}_subs:rx" "$homedir/subscribers_only"
+
+            # ✅ Automated default blog page
+            echo "This is $username's blog" > "$homedir/public/index.html"
+
+        elif [[ "$role" == "mods" ]]; then
+            touch "$homedir/blacklist.txt"
+            v=0
+            while true; do
+                author=$(echo "$entry" | yq ".assigned_authors[$v]" | tr -d '"')
+                [[ "$author" == "null" ]] && break
+                ln -sfn "/home/authors/$author/public" "$homedir/$author"
+                ((v++))
+            done
+            chown -hR "$username:$username" "$homedir"
+        fi
+
+        echo "Created $role: $username"
+    done
+}
+
+lock_removed_users users
+lock_removed_users authors
+
+create_user admins g_admin
+create_user mods g_mod
+create_user authors g_author
+create_user users g_user
+
+u=0
+while true; do
+    user=$(yq ".users[$u]" "$USERS_YAML_FILE")
+    [[ "$user" == "null" ]] && break
+    username=$(echo "$user" | yq ".username" | tr -d '"')
+
+    v=0
+    while true; do
+        author=$(yq ".authors[$v]" "$USERS_YAML_FILE")
+        [[ "$author" == "null" ]] && break
+        authorusername=$(echo "$author" | yq ".username" | tr -d '"')
+
+        mkdir -p "/home/users/$username/all_blogs"
+        ln -sfn "/home/authors/$authorusername/public" "/home/users/$username/all_blogs/$authorusername"
+        ((v++))
+    done
+
+    ((u++))
+done
+
+chown root:g_user /scripts/promote-req
+chmod 750 /scripts/promote-req
+
+mkdir -p /scripts/reports
+chgrp -R g_admins /scripts/reports 2>/dev/null || true
+chmod -R 770 /scripts/reports
+
+chown root:g_user /scripts/requests.yaml
+chmod 664 /scripts/requests.yaml
+
+echo "requests: []" > /scripts/requests.yaml
+chmod 664 /scripts/requests.yaml
+chown root:g_admin /scripts/requests.yaml
+
+bash /scripts/.permission
+
+chown root:g_admin /scripts/.promote
+chmod 750 /scripts/.promote
+
+chmod +x /scripts/.hostupdate /scripts/.croninjector
+bash /scripts/.hostupdate        # Run immediately
+bash /scripts/.croninjector  

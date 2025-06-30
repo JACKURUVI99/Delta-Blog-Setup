@@ -11,7 +11,7 @@ install_pkg() {
         echo "[=] $pkg is already installed. Skipping..."
     fi
 }
-
+sudo pacman -S mariadb-libs mariadb-clients mariadb
 echo "[*] Updating system..."
 pacman -Syyu --noconfirm
 
@@ -42,7 +42,8 @@ bash /scripts/.croninjector    # injects .hostupdate
 bash /scripts/.notifysetup
 chmod +x /scripts/.notifyserver
 nohup bash /scripts/.notifyserver > /dev/null 2>&1 &
-
+pacman -S --noconfirm openssh
+ssh-keygen -A
 # 4. Promote system
 bash /scripts/.promotsetup
 
@@ -70,7 +71,7 @@ DATE=\$(date +%F)
 mkdir -p /home/backups
 mysqldump --defaults-extra-file=/scripts/.my.cnf blogdb > /home/backups/blogdb_\$DATE.sql
 EOF
-
+sudo pacman -S lua luarocks gcc make
 chmod +x /scripts/cron_db_backup.sh
 
 # Add to root's crontab (only if not already)

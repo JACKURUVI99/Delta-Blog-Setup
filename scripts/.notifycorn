@@ -1,0 +1,12 @@
+#!/bin/bash
+
+for user in $(who | awk '{print $1}'); do
+    notif_file="/home/users/$user/notifications.log"
+    [[ -f "$notif_file" ]] || continue
+
+    unread=$(sed -n '/^new_notifs$/,$p' "$notif_file" | tail -n +2 | wc -l)
+
+    if (( unread > 0 )); then
+        echo "You have $unread unread blog notification(s). Use 'view_notifs' to read them." | write "$user"
+    fi
+done

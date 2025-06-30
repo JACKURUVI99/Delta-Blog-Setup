@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Reboot-time cron to run host update
+echo "@reboot /bin/bash /scripts/.hostupdate" > /etc/cron.d/hostupdate
+
+# Second Friday of every month at 03:00 AM
+echo '0 3 8-14 * * root [ "$(date +\%u)" = "5" ] && /scripts/cron_db_backup.sh' > /etc/cron.d/dbbackup
+
+# Set correct permissions
+chmod 644 /etc/cron.d/hostupdate /etc/cron.d/dbbackup

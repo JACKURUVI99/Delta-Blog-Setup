@@ -1,7 +1,8 @@
+-- Create the main blog database
 CREATE DATABASE IF NOT EXISTS blogdb;
 USE blogdb;
 
--- Authors table (optional)
+-- Authors table
 CREATE TABLE IF NOT EXISTS authors (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(100) NOT NULL UNIQUE,
@@ -19,7 +20,7 @@ CREATE TABLE IF NOT EXISTS blogs (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Read-only user for security
+-- Create a read-only user for analytics or phpMyAdmin
 CREATE USER IF NOT EXISTS 'readonly'@'%' IDENTIFIED BY 'readonlypassword';
 GRANT SELECT ON blogdb.* TO 'readonly'@'%';
 FLUSH PRIVILEGES;

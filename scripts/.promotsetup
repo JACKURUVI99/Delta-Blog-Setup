@@ -1,0 +1,142 @@
+#!/bin/bash
+
+set -e
+
+PROMOTE_REQ="/scripts/promote"
+PROMOTE_RESPOND="/scripts/approvepromotion"
+DEPROMOTE="/scripts/depromote"
+REQUESTS_FILE="/scripts/requests.yaml"
+BLOGS_INITIAL_FILE="/scripts/blogs_initial.yaml"
+
+groupadd -f g_user
+groupadd -f g_admin
+groupadd -f g_author
+
+cat << 'EOF' > "$PROMOTE_REQ"
+#!/bin/bash
+
+username="$SUDO_USER"
+REQUESTS_FILE="/scripts/requests.yaml"
+
+if [[ -z "$username" ]]; then
+    echo "Run with sudo"
+    exit 1
+fi
+
+req_exists=$(yq e ".requests | index(\"$username\")" "$REQUESTS_FILE")
+
+if [[ "$req_exists" == "null" ]]; then
+    yq -i ".requests += [\"$username\"]" "$REQUESTS_FILE"
+    echo "Request submitted"
+else
+    echo "Request already submitted"
+fi
+EOF
+
+chmod 755 "$PROMOTE_REQ"
+chown root:root "$PROMOTE_REQ"
+
+cat << 'EOF' > "$PROMOTE_RESPOND"
+#!/bin/bash
+
+REQUESTS_FILE="/scripts/requests.yaml"
+BLOGS_INITIAL_FILE="/scripts/blogs_initial.yaml"
+HELP_TEXT="Usage: approvepromotion <username> <approve|reject>"
+
+username="$1"
+decision="$2"
+
+if [[ -z "$username" || -z "$decision" ]]; then
+    echo "$HELP_TEXT"
+    exit 1
+fi
+
+req_index=$(yq e ".requests | index(\"$username\")" "$REQUESTS_FILE")
+if [[ "$req_index" == "null" ]]; then
+    echo "No such request"
+    exit 1
+fi
+
+if [[ "$decision" == "reject" ]]; then
+    yq -i "del(.requests[$req_index])" "$REQUESTS_FILE"
+    echo "Rejected"
+    exit 0
+fi
+
+if [[ "$decision" == "approve" ]]; then
+    usermod -g "$username" -G g_author -d "/home/authors/$username" "$username"
+    mv "/home/users/$username" "/home/authors/$username"
+
+    dirs="/home/authors/$username/blogs /home/authors/$username/public /home/authors/$username/subscribers_only"
+    mkdir -p $dirs
+    cp "$BLOGS_INITIAL_FILE" "/home/authors/$username/blogs.yaml"
+
+    chown -R "$username:$username" "/home/authors/$username"
+    chmod u=rwx,g=rwx,o=x $dirs
+    chmod u=rw,g=rw,o= "/home/authors/$username/blogs.yaml"
+    chmod o+rx "/home/authors/$username/public"
+
+    for path in /home/users/*/all_blogs; do
+        ln -sfn "/home/authors/$username/public" "$path/$username"
+    done
+
+    yq -i "del(.requests[$req_index])" "$REQUESTS_FILE"
+    echo "User promoted"
+else
+    echo "$HELP_TEXT"
+    exit 1
+fi
+EOF
+
+chmod 750 "$PROMOTE_RESPOND"
+chown root:g_admin "$PROMOTE_RESPOND"
+
+cat << 'EOF' > "$DEPROMOTE"
+#!/bin/bash
+
+username="$1"
+
+if [[ -z "$username" ]]; then
+    echo "Usage: depromote <username>"
+    exit 1
+fi
+
+author_dir="/home/authors/$username"
+user_dir="/home/users/$username"
+
+if [[ ! -d "$author_dir" ]]; then
+    echo "Author not found"
+    exit 1
+fi
+
+for path in /home/users/*/all_blogs; do
+    rm -f "$path/$username"
+done
+
+usermod -g "$username" -G g_users -d "$user_dir" "$username"
+mv "$author_dir" "$user_dir"
+
+chown -R "$username:$username" "$user_dir"
+echo "User demoted"
+EOF
+
+chmod 750 "$DEPROMOTE"
+chown root:g_admin "$DEPROMOTE"
+
+echo "%g_user ALL=(ALL) NOPASSWD: $PROMOTE_REQ" > /etc/sudoers.d/promote_user
+echo "%g_admin ALL=(ALL) NOPASSWD: $PROMOTE_RESPOND" > /etc/sudoers.d/promote_admin
+echo "%g_admin ALL=(ALL) NOPASSWD: $DEPROMOTE *" > /etc/sudoers.d/depromote_admin
+
+chmod 440 /etc/sudoers.d/promote_user /etc/sudoers.d/promote_admin /etc/sudoers.d/depromote_admin
+
+touch "$REQUESTS_FILE"
+chmod 664 "$REQUESTS_FILE"
+chown root:root "$REQUESTS_FILE"
+
+if [[ ! -f "$BLOGS_INITIAL_FILE" ]]; then
+    echo "# initial blogs" > "$BLOGS_INITIAL_FILE"
+    chmod 644 "$BLOGS_INITIAL_FILE"
+    chown root:root "$BLOGS_INITIAL_FILE"
+fi
+
+echo "Setup complete"

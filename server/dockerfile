@@ -1,0 +1,17 @@
+FROM alpine:latest
+
+# Install Lua, MySQL client, and LuaRocks
+RUN apk add --no-cache lua5.3 luarocks mysql-client mariadb-dev build-base
+
+# Install LuaSocket and LuaSQL for MySQL via LuaRocks
+RUN luarocks install luasocket && \
+    luarocks install luasql-mysql MYSQL_INCDIR=/usr/include/mysql MYSQL_LIBDIR=/usr/lib
+
+# Set working directory
+WORKDIR /app
+
+# Copy your server script
+COPY server.lua .
+
+# Run the Lua server (ensure your Lua file uses 'lua5.3')
+CMD ["lua5.3", "server.lua"]

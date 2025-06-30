@@ -1,0 +1,24 @@
+CREATE DATABASE IF NOT EXISTS chatdb;
+USE chatdb;
+
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL
+);
+
+-- Rooms table (required by server.lua)
+CREATE TABLE IF NOT EXISTS rooms (
+  name VARCHAR(50) PRIMARY KEY,
+  created_by VARCHAR(50) NOT NULL
+);
+
+-- Messages table
+CREATE TABLE IF NOT EXISTS messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  room VARCHAR(50) NOT NULL,
+  username VARCHAR(50) NOT NULL,
+  message TEXT NOT NULL,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

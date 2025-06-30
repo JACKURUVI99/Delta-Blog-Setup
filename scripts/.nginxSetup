@@ -1,0 +1,29 @@
+#!/bin/bash
+
+echo "[*] Ensuring www-data user exists..."
+id www-data &>/dev/null || useradd -r -s /usr/sbin/nologin www-data
+
+echo "[*] Updating /etc/hosts with author subdomains..."
+if ! grep -q "# BEGIN BLOG HOSTS" /etc/hosts; then
+    echo "# BEGIN BLOG HOSTS" >> /etc/hosts
+fi
+
+for author in /home/authors/*; do
+  [ -d "$author/public" ] || continue
+  name=$(basename "$author")
+  if ! grep -q "$name.blog.in" /etc/hosts; then
+    echo "127.0.0.1 $name.blog.in" >> /etc/hosts
+  fi
+done
+
+if ! grep -q "# END BLOG HOSTS" /etc/hosts; then
+    echo "# END BLOG HOSTS" >> /etc/hosts
+fi
+
+echo "[*] Setting permissions for Nginx..."
+for author in /home/authors/*; do
+  pub="$author/public"
+  [ -d "$pub" ] && setfacl -R -m u:www-data:rx "$pub"
+done
+
+echo "[✓] Nginx www-data permissions and host entries updated successfully."

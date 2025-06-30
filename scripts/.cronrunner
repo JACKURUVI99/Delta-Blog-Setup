@@ -1,0 +1,20 @@
+#!/bin/bash
+
+month=$(date +%m)
+day=$(date +%d)
+dow=$(date +%u)
+
+if [[ "$month" =~ ^(02|05|08|11)$ ]]; then
+    if [[ "$dow" == 4 ]]; then
+        /scripts/adminpanel
+    elif [[ "$dow" == 6 ]]; then
+        if [[ "$day" -le 7 ]]; then
+            /scripts/adminpanel
+        else
+            last_saturday=$(cal | awk 'NF {DAYS = $NF}; END {print DAYS}')
+            if [[ "$day" == "$last_saturday" ]]; then
+                /scripts/adminpanel
+            fi
+        fi
+    fi
+fi

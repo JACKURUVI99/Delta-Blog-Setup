@@ -1,0 +1,27 @@
+#!/bin/bash
+
+USERS_YAML="/scripts/users.yaml"
+VIEW_SCRIPT="/scripts/.viewnotify"
+
+usernames=$(yq '.users[].username' "$USERS_YAML" | tr -d '"')
+
+for user in $usernames; do
+    user_home="/home/users/$user"
+    dest="$user_home/view_notifs"
+
+    if [[ ! -d "$user_home" ]]; then
+        echo "Skipping $user — home directory not found."
+        continue
+    fi
+
+    cp "$VIEW_SCRIPT" "$dest"
+    chown "$user:$user" "$dest"
+    chmod +x "$dest"
+
+    bashrc="$user_home/.bashrc"
+    [[ -f "$bashrc" ]] || touch "$bashrc"
+    
+    if ! grep -q "$dest" "$bashrc"; then
+        echo "$dest &" >> "$bashrc"
+    fi
+done

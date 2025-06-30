@@ -1,0 +1,77 @@
+#!/bin/bash
+# Fix permissions and ownerships for Delta Blog Platform
+
+# Base directories
+USER_BASE="/home/users"
+AUTHOR_BASE="/home/authors"
+MOD_BASE="/home/mods"
+ADMIN_BASE="/home/admin"
+
+# Groups
+GROUP_USERS="g_user"
+GROUP_AUTHORS="g_author"
+GROUP_MODS="g_mod"
+GROUP_ADMINS="g_admin"
+
+# Set ownership and permissions for user homes
+if [ -d "$USER_BASE" ]; then
+  for uhome in "$USER_BASE"/*; do
+    [ -d "$uhome" ] || continue
+    user=$(basename "$uhome")
+    chown -R "$user":"$user" "$uhome"
+    chmod 750 "$uhome"
+    # special user dirs
+    chmod 750 "$uhome/all_blogs" "$uhome/subscribed_blogs" "$uhome/blog_reads.log" 2>/dev/null
+  done
+fi
+
+# Set ownership and permissions for author homes and subdirs
+if [ -d "$AUTHOR_BASE" ]; then
+  for ahome in "$AUTHOR_BASE"/*; do
+    [ -d "$ahome" ] || continue
+    author=$(basename "$ahome")
+    chown -R "$author":"$author" "$ahome"
+    chmod 750 "$ahome"
+    chmod 770 "$ahome/blogs" "$ahome/public" "$ahome/subscribers_only" 2>/dev/null
+    # ACLs for subscribers_only group
+    setfacl -R -m "g:g_${author}_subs:rx" "$ahome/subscribers_only" 2>/dev/null
+    setfacl -R -d -m "g:g_${author}_subs:rx" "$ahome/subscribers_only" 2>/dev/null
+  done
+fi
+
+# Set ownership and permissions for mods homes and blacklist.txt
+if [ -d "$MOD_BASE" ]; then
+  for mhome in "$MOD_BASE"/*; do
+    [ -d "$mhome" ] || continue
+    mod=$(basename "$mhome")
+    chown -R "$mod":"$mod" "$mhome"
+    chmod 750 "$mhome"
+    # ensure blacklist.txt exists with proper perms
+    if [ ! -f "$mhome/blacklist.txt" ]; then
+      touch "$mhome/blacklist.txt"
+      chown "$mod":"$mod" "$mhome/blacklist.txt"
+      chmod 640 "$mhome/blacklist.txt"
+    else
+      chown "$mod":"$mod" "$mhome/blacklist.txt"
+      chmod 640 "$mhome/blacklist.txt"
+    fi
+  done
+fi
+
+# Set ownership and permissions for admin homes
+if [ -d "$ADMIN_BASE" ]; then
+  for ahome in "$ADMIN_BASE"/*; do
+    [ -d "$ahome" ] || continue
+    admin=$(basename "$ahome")
+    chown -R "$admin":"$admin" "$ahome"
+    chmod 750 "$ahome"
+  done
+fi
+
+# Set permissions for /scripts directory and files
+if [ -d "/scripts" ]; then
+  chown root:"$GROUP_ADMINS" /scripts
+  chmod 750 /scripts
+  find /scripts -type f -exec chown root:"$GROUP_ADMINS" {} \;
+  find /scripts -type f -exec chmod 750 {} \;
+fi

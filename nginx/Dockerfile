@@ -1,22 +1,28 @@
 FROM nginx:latest
 
-# Install SSH and ACL
-RUN apt-get update && apt-get install -y acl openssh-server
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Setup SSH
+# Disable APT cache expiration
+RUN echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
+
+# Install tools
+RUN apt-get update && apt-get install -y acl openssl openssh-server
+
+# Create SSH user (optional)
 RUN mkdir /run/sshd && \
-    useradd jumpuser && \
-    echo 'jumpuser:123' | chpasswd
+    useradd -m jumpuser && echo 'jumpuser:123' | chpasswd
 
-# Copy SSL generator and generate certs
-COPY .gen_ssl /.gen_ssl
-RUN bash /.gen_ssl
+# Generate self-signed SSL cert
+RUN mkdir -p /etc/nginx/certs && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/nginx/certs/self.key \
+    -out /etc/nginx/certs/self.crt \
+    -subj "/C=IN/ST=TN/L=Chennai/O=Delta/CN=blog.in"
 
-
-# Copy custom nginx config and content
+# Copy configs and content
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY blog.in.* /etc/nginx/
 COPY index.html /var/www/blog/index.html
 
-# Start both SSH and Nginx
+# Launch both SSH and Nginx
 CMD ["/bin/sh", "-c", "/usr/sbin/sshd && nginx -g 'daemon off;'"]

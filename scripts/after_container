@@ -13,3 +13,6 @@ bash /scripts/.generatehostentry
 
 echo "[+] Appending to host /etc/hosts..."
 bash /scripts/.sync_hosts_to_host
+
+bash /scripts/.nginxsetup
+bash /scripts/.nginxSetup

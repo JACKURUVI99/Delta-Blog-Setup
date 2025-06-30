@@ -1,0 +1,23 @@
+#!/bin/bash
+
+YAML="/scripts/users.yaml"
+START="# BEGIN BLOG HOSTS"
+END="# END BLOG HOSTS"
+
+# Extract all author usernames
+authors=$(yq '.authors[].username' "$YAML" | tr -d '"')
+
+# Build host entries
+hosts="127.0.0.1 blog.in phpmyadmin.blog.in"
+for author in $authors; do
+    hosts+=" $author.blog.in"
+done
+
+# Backup and update /etc/hosts
+if grep -q "$START" /etc/hosts; then
+    sed -i "/$START/,/$END/c\\$START\n$hosts\n$END" /etc/hosts
+else
+    echo -e "\n$START\n$hosts\n$END" >> /etc/hosts
+fi
+
+echo "[✓] /etc/hosts updated with blog subdomains"

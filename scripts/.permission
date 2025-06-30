@@ -1,0 +1,68 @@
+#!/bin/bash
+
+if [[ "$(id -u)" -ne 0 ]]; then
+    echo "Only root can run this script"
+    exit 1
+fi
+
+echo "Setting permissions..."
+
+declare -A script_info=(
+    [".initusers"]="g_admin root 750"
+    ["manageblogs"]="g_author root 750"
+    ["blogfilter"]="g_mod root 750"
+    ["userFY"]="g_admin root 750"
+    ["adminpannel"]="g_admin root 750"
+    ["suprise"]="g_user root 755"
+    [".notifyserver"]="g_author root 750"
+    [".notifycorn"]="root root 755"
+    [".viewnotify"]="root root 755"
+    ["approvepromotion"]="g_admin root 750"
+    ["depromote"]="g_admin root 750"
+    [".promote"]="g_user root 750"
+    ["promote-req"]="g_user root 750"
+    [".promotsetup"]="root root 644"
+)
+
+cd /scripts || {
+    echo "/scripts not found"
+    exit 1
+}
+
+for script in "${!script_info[@]}"; do
+    IFS=' ' read -r group owner mode <<< "${script_info[$script]}"
+    if [[ -e "$script" ]]; then
+        echo "Setting $script → owner:$owner group:$group mode:$mode"
+        chown "$owner:$group" "$script"
+        chmod "$mode" "$script"
+    else
+        echo "$script not found, skipped"
+    fi
+done
+
+for dir in /home/authors/*; do
+    [[ -d "$dir" ]] || continue
+    setfacl -R -m g:g_mod:rwx "$dir"
+    setfacl -R -d -m g:g_mod:rwx "$dir"
+done
+
+for role in users authors mods; do
+    for dir in /home/$role/*; do
+        [[ -d "$dir" ]] || continue
+        setfacl -R -m g:g_admin:rwx "$dir"
+        setfacl -R -d -m g:g_admin:rwx "$dir"
+    done
+done
+
+for dir in /home/authors/*; do
+    [[ -d "$dir" ]] || continue
+    setfacl -R -m g:g_author:rwx "$dir"
+    setfacl -R -d -m g:g_author:rwx "$dir"
+done
+
+if [[ -f "/scripts/subscriptions.yaml" ]]; then
+    chgrp g_user /scripts/subscriptions.yaml
+    chmod 664 /scripts/subscriptions.yaml
+fi
+
+echo "Done"

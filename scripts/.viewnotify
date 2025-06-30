@@ -1,0 +1,12 @@
+#!/bin/bash
+
+notifs_file="$HOME/notifications.log"
+[[ ! -f "$notifs_file" ]] && exit 0
+
+unread=$(sed -n '/^new_notifs$/,$p' "$notifs_file" | tail -n +2 | wc -l)
+
+if (( unread > 0 )); then
+    echo "You have $unread unread blog notification(s):"
+    awk 'BEGIN {seen=0} /^new_notifs$/ {seen=1; next} seen {print}' "$notifs_file"
+    echo "new_notifs" > "$notifs_file"
+fi
